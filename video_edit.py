@@ -8,7 +8,7 @@ def process_video_frames(input_path, target_fps=24, target_duration=5):
     if not cap.isOpened():
         raise Exception("Failed to open video file.")
 
-    target_frames = target_fps * target_duration  # 120 frames for 5 seconds.
+    target_frames = target_fps * target_duration  # 120 frames for 5 seconds
     frames = []
     frame_width, frame_height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
