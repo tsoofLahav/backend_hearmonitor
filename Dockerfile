@@ -11,6 +11,7 @@ WORKDIR /app
 # Copy requirements and install
 COPY requirements.txt .
 RUN pip install --upgrade pip
+RUN pip install --upgrade typing-extensions
 RUN pip install -r requirements.txt
 
 # Copy the rest of your code
