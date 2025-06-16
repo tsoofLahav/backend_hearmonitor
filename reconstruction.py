@@ -10,7 +10,7 @@ SAMPLE_RATE = 24
 FULL_LENGTH = 10 * SAMPLE_RATE  # 240
 MISSING_LENGTH = 2 * SAMPLE_RATE  # 48
 
-# ---------- MLP Reconstruction Model ----------
+# ---------- MLP Reconstruction Model -------
 class MLP(nn.Module):
     def __init__(self, input_size=FULL_LENGTH, output_size=MISSING_LENGTH):
         super().__init__()
