@@ -4,7 +4,7 @@ import globals
 import requests
 from io import BytesIO
 
-url = "https://heart0monitor0storage.blob.core.windows.net/models/model2_classifier.pt"
+url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/model2_classifier.pt"
 
 # ---------- Define the model class ---------
 class SimpleMLP(nn.Module):

@@ -137,7 +137,7 @@ def setup_video_route(app):
             # ---------- Part 8: Save + send to frontend ----------
             # ❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️
             bpm = 60.0 / globals.ave_gap
-            save_prediction_to_db(future_peaks)
+            #save_prediction_to_db(future_peaks)
 
             return jsonify({
                 'prediction': future_peaks_shifted,

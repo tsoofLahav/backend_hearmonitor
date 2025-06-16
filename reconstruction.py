@@ -4,7 +4,7 @@ import globals
 import requests
 from io import BytesIO
 
-url = "https://heart0monitor0storage.blob.core.windows.net/models/model_reconstruction.pt"
+url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/model_reconstruction.pt"
 # ---------- Constants ----------
 SAMPLE_RATE = 24
 FULL_LENGTH = 10 * SAMPLE_RATE  # 240
