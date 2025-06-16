@@ -10,7 +10,7 @@ setup_video_route(app)
 app.register_blueprint(data_bp, url_prefix="/data")
 
 
-# Health check route
+# Health check route.
 @app.route('/health', methods=['GET'])
 def health():
     return jsonify({"status": "OK"}), 200
