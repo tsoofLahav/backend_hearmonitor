@@ -2,7 +2,7 @@ name: Build and Push to GHCR
 
 on:
   push:
-    branches: [main]  # or your working branch
+    branches: [main]  # or your working branch.
 
 jobs:
   build-and-push:
