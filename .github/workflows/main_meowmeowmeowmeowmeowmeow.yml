@@ -18,10 +18,14 @@ jobs:
       - name: Log in to GitHub Container Registry
         run: echo "${{ secrets.GITHUB_TOKEN }}" | docker login ghcr.io -u ${{ github.actor }} --password-stdin
 
+      - name: Set lowercase repo name
+        id: prep
+        run: echo "repo_name=${GITHUB_REPOSITORY,,}" >> $GITHUB_OUTPUT
+
       - name: Build and push Docker image
         run: |
-          docker build -t ghcr.io/${{ github.repository }}:${{ github.sha }} .
-          docker push ghcr.io/${{ github.repository }}:${{ github.sha }}
+          docker build -t ghcr.io/${{ steps.prep.outputs.repo_name }}:${{ github.sha }} .
+          docker push ghcr.io/${{ steps.prep.outputs.repo_name }}:${{ github.sha }}
 
   deploy:
     runs-on: ubuntu-latest
@@ -47,7 +51,7 @@ jobs:
         with:
           app-name: 'meowmeowmeowmeowmeowmeow'
           slot-name: 'Production'
-          images: 'ghcr.io/${{ github.repository }}:${{ github.sha }}'
+          images: 'ghcr.io/${{ steps.prep.outputs.repo_name }}:${{ github.sha }}'
 
 
 
