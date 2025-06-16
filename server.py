@@ -3,6 +3,7 @@ from video_route import setup_video_route
 from data_route import data_bp
 import os
 
+
 app = Flask(__name__)
 
 setup_video_route(app)
