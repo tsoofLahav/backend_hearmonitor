@@ -24,7 +24,7 @@ jobs:
         password: ${{ secrets.GITHUB_TOKEN }}
 
     - name: Build image
-      run: docker build -t ghcr.io/${{ github.repository_owner }}/backend_hearmonitor:latest .
+      run: docker build -t ghcr.io/tsooflahav/backend_hearmonitor:latest .
 
     - name: Push image
-      run: docker push ghcr.io/${{ github.repository_owner }}/backend_hearmonitor:latest
+      run: docker push ghcr.io/tsooflahav/backend_hearmonitor:latest
