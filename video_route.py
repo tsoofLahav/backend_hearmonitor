@@ -3,20 +3,24 @@ from flask import Flask, request, jsonify
 import os
 import logging
 
-from video_edit import process_video_frames           # part 2: video -> signal
-from filter_and_peaks import denoise_ppg                        # part 4: filter + detect
-from predict_model import predict_future_sequence        # part 6: prediction
-from data_route import save_prediction_to_db          # part 7: store
+from video_edit import process_video_frames  # part 2: video -> signal
+from filter_and_peaks import denoise_ppg  # part 4: filter + detect
+from predict_model import predict_future_sequence  # part 6: prediction
 import globals
+from construct_raw_signal import connect_signals_with_gaps
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s", force=True)
+
 
 def setup_video_route(app):
     @app.route('/process_video', methods=['POST'])
     def process_video():
         try:
+            k = globals.round_duration  # local shorthand for clarity
+
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+
             # ---------- Part 1: Get video ----------
-            # 🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍🤍
             file = request.files.get('video')
             if not file:
                 return jsonify({'error': 'No video file received.'}), 400
@@ -26,125 +30,106 @@ def setup_video_route(app):
             if not os.path.exists(video_path) or os.path.getsize(video_path) == 0:
                 raise Exception("Invalid video file.")
 
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+
             # ---------- Part 2: Video to signal ----------
-            # 🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷🩷
-            fps, intensities = process_video_frames(video_path, target_duration=5)
+            fps, intensities = process_video_frames(video_path, target_duration=k)
             if not intensities:
                 raise Exception("No frames were processed.")
 
-            segment_length = int(5 * fps)
-            globals.round_count += 1
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
 
-            # ---------- Part 3: Concatenate raw signal (10s sliding window) ----------
-            # 🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡🧡
-            if globals.round_count == 1:
-                globals.raw_buffer.extend(intensities)  # first 5s only
-                # loading the models at first round
+            globals.raw_buffer.append(intensities)
+
+            if len(globals.raw_buffer) < 3:
                 return jsonify({'loading': True})
-            else:
-                if globals.round_count == 2:
-                    globals.raw_buffer.extend(intensities)  # now 10s total
-                else:
-                    globals.raw_buffer = globals.raw_buffer[segment_length:] + intensities  # slide 5s forward
+            elif len(globals.raw_buffer) >= 3:
+                # Keep only the latest 5 rounds
+                if len(globals.raw_buffer) > 3:
+                    globals.raw_buffer.pop(0)
+                raw_signal = connect_signals_with_gaps(globals.raw_buffer[0], globals.raw_buffer[1], globals.raw_buffer[2])
+
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
 
             # ---------- Part 4: Filter + detect peaks + check signal quality ----------
-            # 💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛💛
             clean_signal, filtered_signal, not_reading, peaks_in_window = denoise_ppg(
-                globals.raw_buffer, fps)
+                raw_signal, fps)
 
             if not_reading:
-                globals.reset_all()  # also resets raw, peaks, etc.
-                return jsonify({'not_reading': True})
-
-            # ---------- Part 5: Append clean peaks using 0.5s overlap logic ----------
-            # 💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚💚
-            if globals.round_count == 2:
-                valid_peaks = [t for t in peaks_in_window if 0.5 <= t < 9.5]
-            else:
-                valid_peaks = [t for t in peaks_in_window if 4.5 <= t < 9.5]
-
-            # Shift valid_peaks by (5 * (globals.round_count - 2)) seconds
-            time_shift = 5 * (globals.round_count - 2)
-            valid_peaks_shifted = [t + time_shift for t in valid_peaks]
-
-            # Add to history
-            globals.peak_history.extend(valid_peaks_shifted)
-
-            # Keep only the last 20 peaks
-            if len(globals.peak_history) > 20:
-                globals.peak_history = globals.peak_history[-20:]
-
-            # ---------- Part 6: Predict 30 intervals from last 20 peaks ----------
-            # 🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵🩵
-            past_peaks = globals.peak_history
-            # Step 1: Convert past peaks to intervals
-            past_intervals = [t2 - t1 for t1, t2 in zip(past_peaks[:-1], past_peaks[1:])]
-            globals.ave_gap = np.mean(past_intervals)
-
-            # Step 2: Predict intervals
-            predicted_intervals = predict_future_sequence(past_intervals)
-
-            # ⚠️ New: Add not_reading if prediction total duration < 10.5s
-            if sum(predicted_intervals) < 10.5:
                 globals.reset_all()
                 return jsonify({'not_reading': True})
 
-            # Step 3: Convert intervals to cumulative time points
-            last_peak_time = past_peaks[-1]
-            predicted_times = []
-            current_time = last_peak_time
-            for interval in predicted_intervals:
-                current_time += interval
-                predicted_times.append(current_time)
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
 
-            # Step 4: Slice next 5s window (two rounds ahead)
-            start = (globals.round_count + 1) * 5
-            end = start + 5
+            # ---------- Part 5: Prepare model input from clean signal ----------
+            # 2. Save last real peak
+            last_real_peak = peaks_in_window[-1]
 
-            future_peaks = [t for t in predicted_times if start <= t < end]
+            # 3. Compute intervals and update global average
+            intervals = [b - a for a, b in zip(peaks_in_window[:-1], peaks_in_window[1:])]
+            globals.ave_gap = np.mean(intervals) if intervals else globals.ave_gap
 
-            # Step 5: Shift back to start from 0
-            future_peaks_shifted = [t - start for t in future_peaks]
+            # 4. Adjust interval list to length 8 (add or trim)
+            if len(intervals) < 8:
+                intervals = [globals.ave_gap] * (8 - len(intervals)) + intervals
+            else:
+                intervals = intervals[-8:]
 
-            # ---------- Part 7: Save for local testing ----------
-            # 💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙💙
+            # 5. Generate 8 peaks from intervals via cumulative sum
+            generated_peaks = np.cumsum(intervals).tolist()
+
+            # 6. Compute time shift for aligning prediction
+            shift = last_real_peak - generated_peaks[-1]
+
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+
+            # ---------- Part 6: Predict future peaks ----------
+
+            # 1. Prepare model input (8 intervals + 8 peaks)
+            model_input = [val for i in range(8) for val in (intervals[i], generated_peaks[i])]
+
+            # 2. Run prediction using loaded model
+            predicted_peaks = predict_future_sequence(model_input)
+
+            # 3. Shift prediction to align with actual time
+            predicted_peaks = [t + shift for t in predicted_peaks]
+
+            # 4. Extend if last predicted peak < 13.8 to fully cover 12–14s window
+            while predicted_peaks[-1] < 13.5:
+                predicted_peaks.append(predicted_peaks[-1] + globals.ave_gap)
+
+            # 5. Keep only predicted peaks between 12–14s and shift to range 0–2s
+            final_prediction = [t - 10.5 for t in predicted_peaks if 10.5 <= t <= 13.5]
+
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+
             if globals.testing_mode:
-                globals.prediction_buffer.append(future_peaks_shifted)
-                response = {
-                    'clean_signal': clean_signal.tolist(),
-                    'filtered_signal': filtered_signal.tolist(),
-                    'peaks_in_window': peaks_in_window
-                }
-
-                # Only add prediction after 4 rounds (we need 2+2 rounds to connect)
-                if len(globals.prediction_buffer) >= 4:
-                    prediction_round_minus3 = globals.prediction_buffer[0]  # oldest
-                    prediction_round_minus2 = [t + 5.0 for t in globals.prediction_buffer[1]]  # shifted by +5s
-
-                    connected_prediction = prediction_round_minus3 + prediction_round_minus2
-
-                    # Pop the oldest prediction (round N-3)
+                # Add latest prediction to the front of the buffer
+                globals.prediction_buffer.append(final_prediction)
+                if len(globals.prediction_buffer) > 4:
                     globals.prediction_buffer.pop(0)
 
-                    response['prediction'] = connected_prediction
-                else:
-                    # Not enough history yet
-                    response['prediction'] = []
+                # Use global function to build connected prediction
+                connected_prediction = globals.construct_long_prediction()
 
-                # Return for local testing (early exit, skip part 8)
-                return jsonify(response)
+                return jsonify({
+                    'clean_signal': clean_signal.tolist(),
+                    'filtered_signal': filtered_signal.tolist(),
+                    'peaks_in_window': peaks_in_window,
+                    'prediction': connected_prediction
+                })
+
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
 
             # ---------- Part 8: Save + send to frontend ----------
-            # ❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️❤️
             bpm = 60.0 / globals.ave_gap
-            #save_prediction_to_db(future_peaks)
-
             return jsonify({
-                'prediction': future_peaks_shifted,
+                'prediction': final_prediction,
                 'bpm': bpm
             })
-            # 💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜💜
+
         except Exception as e:
             logging.exception("Unhandled exception:")
             globals.reset_all()
             return jsonify({'server_error': True}), 500
+

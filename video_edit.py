@@ -1,14 +1,16 @@
 import cv2
 import numpy as np
 
+import globals
 
-def process_video_frames(input_path, target_fps=24, target_duration=5):
+
+def process_video_frames(input_path, target_fps=24, target_duration=globals.round_duration):
     """Reads a video, adjusts FPS to exactly 24, extracts intensities, and returns FPS & intensities."""
     cap = cv2.VideoCapture(input_path)
     if not cap.isOpened():
         raise Exception("Failed to open video file.")
 
-    target_frames = target_fps * target_duration  # 120 frames for 5 seconds
+    target_frames = target_fps * target_duration
     frames = []
     frame_width, frame_height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 

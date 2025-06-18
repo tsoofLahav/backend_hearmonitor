@@ -4,49 +4,51 @@ import globals
 import requests
 from io import BytesIO
 
-url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/mlp_model.pt"
-class SimpleMLP(nn.Module):
-    def __init__(self, input_size=19, output_size=30):
+# Updated URL
+url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/deep_lstm_model.pt"
+
+# Updated model structure to MLP
+class MLP(nn.Module):
+    def __init__(self, input_dim=2, seq_len=8, output_size=8):
         super().__init__()
-        self.model = nn.Sequential(
-            nn.Linear(input_size, 64),
+        self.net = nn.Sequential(
+            nn.Flatten(),  # (B, 6, 2) -> (B, 12)
+            nn.Linear(input_dim * seq_len, 128),
             nn.ReLU(),
-            nn.Linear(64, 64),
+            nn.Linear(128, 64),
             nn.ReLU(),
             nn.Linear(64, output_size)
         )
 
     def forward(self, x):
-        return self.model(x)
-
+        return self.net(x)  # (B, output_size)
 
 def load_predictor_model():
-    global url  # Set this in globals
-    response = requests.get(url)
-    response.raise_for_status()
+    model = MLP(input_dim=2, seq_len=8, output_size=8)
 
-    buffer = BytesIO(response.content)
-    model = SimpleMLP(input_size=19, output_size=30)  # adjust sizes if needed
-    model.load_state_dict(torch.load(buffer, map_location='cpu'))
+    if getattr(globals, "local_mode", False):
+        model.load_state_dict(torch.load("deep_lstm_model.pt", map_location='cpu'))
+        print("✅ Predictor model loaded from local file.")
+    else:
+        response = requests.get(url)
+        response.raise_for_status()
+        buffer = BytesIO(response.content)
+        model.load_state_dict(torch.load(buffer, map_location='cpu'))
+        print("✅ Predictor model loaded from URL.")
+
     model.eval()
     globals.predictor_model = model
-    print("✅ Predictor model loaded from URL.")
 
+def predict_future_sequence(input_intervals_and_peaks):
 
+    if len(input_intervals_and_peaks) < 16:
+        raise ValueError("Expected 16 input values (8 intervals + 8 peaks)")
 
-def predict_future_sequence(input_intervals):
+    sequence = torch.tensor(input_intervals_and_peaks[:12], dtype=torch.float32).reshape(1, 8, 2)
+
     model = globals.predictor_model
-
-    # Pad input to 19 if needed
-    if len(input_intervals) < 19:
-        first_val = input_intervals[0] if input_intervals else 1.0  # fallback if empty
-        pad_count = 19 - len(input_intervals)
-        input_intervals = [first_val] * pad_count + input_intervals
-
-    input_tensor = torch.tensor(input_intervals[:19], dtype=torch.float32).unsqueeze(0)
-
     with torch.no_grad():
-        output = model(input_tensor)
+        predicted_peaks = model(sequence)
 
-    return output.squeeze(0).tolist()
+    return predicted_peaks.squeeze(0).tolist()
 
