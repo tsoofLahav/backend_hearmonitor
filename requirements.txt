@@ -8,5 +8,6 @@ fastdtw~=0.3.4
 statsmodels~=0.14.4
 pyodbc~=5.2.0
 requests~=2.32.4
-torch==2.7.1
+torch~=2.6.0
 scipy~=1.13.1
+pydub~=0.25.1

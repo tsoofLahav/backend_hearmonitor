@@ -1,5 +1,5 @@
 import numpy as np
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, send_file, make_response
 import os
 import logging
 
@@ -8,6 +8,7 @@ from filter_and_peaks import denoise_ppg  # part 4: filter + detect
 from predict_model import predict_future_sequence  # part 6: prediction
 import globals
 from construct_raw_signal import connect_signals_with_gaps
+from create_sound import generate_beep_track
 
 logging.basicConfig(level=logging.DEBUG, format="%(asctime)s %(levelname)s %(message)s", force=True)
 
@@ -95,19 +96,19 @@ def setup_video_route(app):
             predicted_peaks = [t + shift for t in predicted_peaks]
 
             # 4. Extend if last predicted peak < 13.8 to fully cover 12–14s window
-            while predicted_peaks[-1] < 13.5:
+            while predicted_peaks[-1] < 14:
                 predicted_peaks.append(predicted_peaks[-1] + globals.ave_gap)
 
             # 5. Keep only predicted peaks between 12–14s and shift to range 0–2s
-            final_prediction = [t - 10.5 for t in predicted_peaks if 10.5 <= t <= 13.5]
+            final_prediction = [t - 10.5 for t in predicted_peaks if 10.5 <= t <= 14]
 
             # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
 
             if globals.testing_mode:
                 # Add latest prediction to the front of the buffer
-                globals.prediction_buffer.append(final_prediction)
+                globals.prediction_buffer.insert(0, final_prediction)
                 if len(globals.prediction_buffer) > 4:
-                    globals.prediction_buffer.pop(0)
+                    globals.prediction_buffer.pop(4)
 
                 # Use global function to build connected prediction
                 connected_prediction = globals.construct_long_prediction()
@@ -120,13 +121,27 @@ def setup_video_route(app):
                 })
 
             # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+            # --- Part 8: Handle edge gap correction ---
+            # Check previous gap and adjust predictions if needed
+            if globals.last_gap is not None:
+                ave_interval = globals.ave_gap
+                if globals.last_gap + final_prediction[0] > 1.5 * ave_interval:
+                    # Missed a beat — insert one at t=0
+                    final_prediction.insert(0, 0.0)
+                elif globals.last_gap + final_prediction[0] < 0.5 * ave_interval:
+                    # Double counted — remove first peak
+                    if final_prediction[0] < 0.2:
+                        final_prediction.pop(0)
 
-            # ---------- Part 8: Save + send to frontend ----------
-            bpm = 60.0 / globals.ave_gap
-            return jsonify({
-                'prediction': final_prediction,
-                'bpm': bpm
-            })
+            # Save current gap for next round
+            globals.last_gap = 3.5 - final_prediction[-1]
+            # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
+            # ---------- Part 9: Save + send to frontend ----------
+            globals.saved_predictions.append(final_prediction)
+            audio_buffer = generate_beep_track(final_prediction)
+            response = make_response(send_file(audio_buffer, mimetype="audio/wav", download_name="feedback.wav"))
+            response.headers['X-BPM'] = str(60.0 / globals.ave_gap)
+            return response
 
         except Exception as e:
             logging.exception("Unhandled exception:")

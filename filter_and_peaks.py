@@ -1,9 +1,10 @@
 import numpy as np
 from scipy.signal import butter, sosfiltfilt, find_peaks
 import globals
+from unreadable_detection import is_good_quality
 
 
-def butter_bandpass_filter(signal, fs, lowcut=0.8, highcut=3.0, order=4):
+def butter_bandpass_filter(signal, fs, lowcut=0.8, highcut=3.0, order=6):
     """Applies a band-pass filter using second-order sections (SOS) for stability."""
     nyq = 0.5 * fs
     low, high = lowcut / nyq, highcut / nyq
@@ -20,7 +21,7 @@ def regularize_signal(signal):
 
 def denoise_ppg(raw_signal, fs):
     """
-    Denoise PPG signal, check signal quality, and detect peaks.
+    Denoise PPG signal, check signal quality via beat correlation, and detect peaks.
     """
     raw_signal = np.array(raw_signal)
 
@@ -30,21 +31,8 @@ def denoise_ppg(raw_signal, fs):
     # Step 2: Regularization
     normalized_signal = regularize_signal(filtered_signal)
 
-    # Step 3: Softer quality check
-    std = np.std(normalized_signal)
-    amp = np.max(normalized_signal) - np.min(normalized_signal)
-    avg_height = np.mean([x for x in normalized_signal if x > 0]) if any(x > 0 for x in normalized_signal) else 0
-
-    quality_score = 0
-    if std < 0.015:
-        quality_score += 1
-    if amp < 0.25:
-        quality_score += 1
-    if avg_height < 0.08:
-        quality_score += 1
-
-    # Fail if 2 or more issues are detected
-    if quality_score >= 2:
+    # Step 3: New quality check
+    if not is_good_quality(normalized_signal):
         return None, filtered_signal, True, []
 
     # Step 4: Peak detection

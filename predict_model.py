@@ -5,7 +5,7 @@ import requests
 from io import BytesIO
 
 # Updated URL
-url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/deep_lstm_model.pt"
+url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/mlp_model.pt"
 
 # Updated model structure to MLP
 class MLP(nn.Module):
@@ -44,7 +44,7 @@ def predict_future_sequence(input_intervals_and_peaks):
     if len(input_intervals_and_peaks) < 16:
         raise ValueError("Expected 16 input values (8 intervals + 8 peaks)")
 
-    sequence = torch.tensor(input_intervals_and_peaks[:12], dtype=torch.float32).reshape(1, 8, 2)
+    sequence = torch.tensor(input_intervals_and_peaks[:16], dtype=torch.float32).reshape(1, 8, 2)
 
     model = globals.predictor_model
     with torch.no_grad():

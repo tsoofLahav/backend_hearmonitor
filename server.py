@@ -24,10 +24,9 @@ def load_models():
     return jsonify({"status": "Models loaded"}), 200
 
 # Reset globals route
-@app.route('/reset', methods=['GET'])
-def reset():
-    globals.reset_all()
-    return jsonify({"status": "Globals reset"}), 200
+@app.route('/end', methods=['POST'])
+def end_session():
+    return jsonify({"predictions": globals.saved_predictions}), 200
 
 
 if __name__ == "__main__":

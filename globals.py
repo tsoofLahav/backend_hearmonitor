@@ -1,7 +1,7 @@
 # constants on runtime
 round_duration = 3
 testing_mode = False
-local_mode = True
+local_mode = False
 
 # video_route.
 raw_buffer = []
@@ -9,27 +9,26 @@ peak_history = []
 round_count = 0
 prediction_buffer = []
 ave_gap = None
+last_gap = None
 
 # data_route
 session_id = None
+saved_predictions = []
 
 # models
 mlp_model = None
-input_size = 48
-reconstruction_model = None
-predictor_model = None
+
 
 
 def construct_long_prediction():
     if len(prediction_buffer) < 4:
         return []
 
-    part1 = prediction_buffer[-4]
-    part2 = prediction_buffer[-3]
-    part3 = prediction_buffer[-2]
+    part1 = prediction_buffer[3]
+    part2 = prediction_buffer[2]
+    part3 = prediction_buffer[1]
 
-    # Threshold for overlap (e.g., 0.125 seconds)
-    overlap_thresh = 0.2
+    overlap_thresh = 0.1
 
     # Get last peak of part1 and first of part2
     if part1 and part2:
@@ -50,9 +49,10 @@ def construct_long_prediction():
 
 
 def reset_all():
-    global raw_buffer, peak_history, round_count, prediction_buffer, ave_gap
+    global raw_buffer, peak_history, round_count, prediction_buffer, ave_gap, saved_predictions
     raw_buffer = []
     peak_history = []
     round_count = 0
     prediction_buffer = []
     ave_gap = None
+    saved_predictions = []
