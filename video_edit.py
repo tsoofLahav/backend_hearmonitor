@@ -38,7 +38,7 @@ def process_video_frames(input_path, target_fps=24, target_duration=globals.roun
 
     # Extract intensities
     for frame in resampled_frames:
-        green_channel = frame[:, :, 1]  # Green is channel 1 in BGR
+        green_channel = frame[:, :, 2]  # Green is channel 1 in BGR
         roi_values = green_channel[mask]
         intensities.append(-np.mean(roi_values))  # Invert intensity
 
