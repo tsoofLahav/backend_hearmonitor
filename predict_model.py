@@ -5,7 +5,7 @@ import requests
 from io import BytesIO
 
 # Updated URL
-url = "https://meowmeowmeowmeowmeow.blob.core.windows.net/models/mlp_model.pt"
+url = "https://myheartappstorage.blob.core.windows.net/models/mlp_model.pt"
 
 # Updated model structure to MLP
 class MLP(nn.Module):
