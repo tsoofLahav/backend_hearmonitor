@@ -125,12 +125,12 @@ def setup_video_route(app):
             # Check previous gap and adjust predictions if needed
             if globals.last_gap is not None:
                 ave_interval = globals.ave_gap
-                if globals.last_gap + final_prediction[0] > 1.3 * ave_interval:
+                if globals.last_gap + final_prediction[0] > 1.5 * ave_interval:
                     # Missed a beat — insert one at t=0
                     final_prediction.insert(0, 0.0)
-                elif globals.last_gap + final_prediction[0] < 0.5 * ave_interval:
+                elif globals.last_gap + final_prediction[0] < 0.2 * ave_interval:
                     # Double counted — remove first peak
-                    if final_prediction[0] < 0.2:
+                    if final_prediction[0] < 0.1:
                         final_prediction.pop(0)
 
             # Save current gap for next round
