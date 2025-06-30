@@ -123,18 +123,23 @@ def setup_video_route(app):
             # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
             # --- Part 8: Handle edge gap correction ---
             # Check previous gap and adjust predictions if needed
-            if globals.last_gap is not None:
-                ave_interval = globals.ave_gap
-                if globals.last_gap + final_prediction[0] > 1.4 * ave_interval:
-                    # Missed a beat — insert one at t=0
-                    insert_time = max(final_prediction[0] - 0.7, 0.0)
-                    final_prediction.insert(0, insert_time)
-                elif globals.last_gap + final_prediction[0] < 0.2 * ave_interval:
-                    # Double counted — remove first peak
-                    if final_prediction[0] < 0.1:
-                        final_prediction.pop(0)
+            ave_interval = globals.ave_gap
+            last_peak = final_prediction[-1]
+            gap_to_end = 3.5 - last_peak
 
-            # Save current gap for next round
+            if gap_to_end > ave_interval * 1:
+                final_prediction.append(last_peak + ave_interval)
+
+            if globals.last_gap is not None and len(final_prediction) > 0:
+                first_candidate_time = ave_interval - globals.last_gap
+                first_candidate_time = max(first_candidate_time, 0.0)
+
+                if abs(final_prediction[0] - first_candidate_time) < 0.4 * ave_interval:
+                    merged_time = (final_prediction[0] + first_candidate_time) / 2
+                    final_prediction[0] = merged_time
+                else:
+                    final_prediction.insert(0, first_candidate_time)
+
             globals.last_gap = 3.5 - final_prediction[-1]
             # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
             # ---------- Part 9: Save + send to frontend ----------
