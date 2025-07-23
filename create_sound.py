@@ -13,4 +13,4 @@ def generate_beep_track(peaks, total_duration=3.5, beep_path="beep.wav"):
     buffer = BytesIO()
     track.export(buffer, format="wav")
     buffer.seek(0)
-    return buffer  # return to main page
+    return buffer  # return to main page.

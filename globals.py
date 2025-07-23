@@ -3,7 +3,7 @@ round_duration = 3
 testing_mode = False
 local_mode = False
 
-# video_route.
+# video_route
 raw_buffer = []
 peak_history = []
 round_count = 0

@@ -122,7 +122,7 @@ def setup_video_route(app):
 
             # 🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩🟩
             # --- Part 8: Handle edge gap correction ---
-            # Check previous gap and adjust predictions if needed
+            # Check previous gap and adjust predictions if needed.
             ave_interval = globals.ave_gap
             last_peak = final_prediction[-1]
             gap_to_end = 3.5 - last_peak

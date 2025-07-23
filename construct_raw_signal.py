@@ -12,7 +12,7 @@ def connect_signals_with_gaps(part1, part2, part3):
     def interpolate_gap(start_val, end_val, num_frames=12):
         return CubicSpline([0, num_frames + 1], [start_val, end_val])(np.arange(1, num_frames + 1))
 
-    # Interpolate between part1[-1] and part2[0]
+    # Interpolate between part1[-1] and part2[0].
     gap1 = interpolate_gap(part1[-1], part2[0])
 
     # Interpolate between part2[-1] and part3[0]

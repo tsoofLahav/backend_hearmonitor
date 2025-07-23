@@ -7,7 +7,6 @@ from io import BytesIO
 # Updated URL
 url = "https://myheartappstorage.blob.core.windows.net/models/mlp_model.pt"
 
-# Updated model structure to MLP
 class MLP(nn.Module):
     def __init__(self, input_dim=2, seq_len=8, output_size=8):
         super().__init__()

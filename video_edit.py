@@ -14,7 +14,7 @@ def process_video_frames(input_path, target_fps=24, target_duration=globals.roun
     frames = []
     frame_width, frame_height = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH)), int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
 
-    # Define circular ROI mask
+    # Define circular ROI mask.
     center_x, center_y = frame_width // 2, frame_height // 2
     radius = min(center_x, center_y) // 2
     Y, X = np.ogrid[:frame_height, :frame_width]

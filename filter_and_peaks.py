@@ -16,7 +16,7 @@ def regularize_signal(signal):
     """Normalize the signal to have mean 0 and std 1."""
     mean = np.mean(signal)
     std = np.std(signal)
-    return (signal - mean) / (std + 1e-8)  # Avoid division by zero
+    return (signal - mean) / (std + 1e-8)  # Avoid division by zero.
 
 
 def denoise_ppg(raw_signal, fs):
