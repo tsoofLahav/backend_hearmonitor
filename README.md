@@ -18,7 +18,7 @@ This system supports research in interoception and neuroplasticity by enabling a
 - The **backend**:
   1. Converts each video into a PPG signal.
   2. Detects heartbeat peaks.
-  3. Uses a pre-trained **MLP model** to predict future peaks.
+  3. Uses a pre-trained **TCN model** to predict future peaks.
   4. Converts the predicted peaks into an audio track and sends it back to the app.
 
 ![Architecture](architecture.png)
